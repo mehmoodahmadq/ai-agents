@@ -100,11 +100,35 @@ async def fetch_all(urls: list[str]) -> list[bytes]:
 
 ## Security
 
-- Never use `pickle` with untrusted data — it executes arbitrary code on load.
-- Never use `eval()` or `exec()` with user input.
-- Use `secrets` module for tokens, passwords, and cryptographic randomness — not `random`.
-- Sanitize inputs before passing them to shell commands. Use `subprocess` with a list, never `shell=True`.
-- Store secrets in environment variables or a secrets manager — never in source code or config files.
+Python's dynamism is its strength and its attack surface. Every external input is hostile until validated.
+
+- **No dynamic code execution** — never `eval()`, `exec()`, or `compile()` with user input. There is no safe way.
+- **Deserialization** — `pickle`, `marshal`, `shelve`, and `yaml.load` (without `SafeLoader`) execute arbitrary code on untrusted data. Use `json` for interop; for YAML use `yaml.safe_load`. Validate every field with Pydantic afterwards.
+- **Shell & subprocess** — `subprocess.run([cmd, arg1, arg2])` with a list, never `shell=True` with user input. Never use `os.system`. If you must compose a shell string, use `shlex.quote` for each argument.
+- **SQL injection** — parameterized queries always. `cursor.execute("SELECT * FROM u WHERE id = %s", (user_id,))` — never f-strings or `.format()` into SQL. SQLAlchemy/Django ORMs are parameterized by default; `.raw()` / `text()` with user input is not.
+- **Path traversal** — resolve user-supplied paths and verify containment: `full = (base / user_path).resolve(); full.relative_to(base.resolve())` — `relative_to` raises if escape is attempted.
+- **SSRF** — for user-supplied URLs, resolve the hostname and reject private/loopback/metadata ranges (`10.0.0.0/8`, `127.0.0.0/8`, `169.254.169.254`, `::1`, `fc00::/7`) before the request.
+- **XML** — `defusedxml` or `lxml` with `resolve_entities=False`. The stdlib `xml` module is vulnerable to XXE, billion laughs, and entity expansion.
+- **Crypto** — `secrets.token_urlsafe()`, `secrets.token_bytes()`, `secrets.compare_digest()` for anything security-sensitive. Never `random` — it's a Mersenne twister, not secure. For password hashing use `argon2-cffi`, `bcrypt`, or `passlib`. Use `cryptography` (Fernet, AEAD) — never write your own primitives.
+- **Secrets management** — env vars via `pydantic-settings` with validation. Fail to boot if required secrets are missing. Never commit `.env`, credentials, or keys. Use a secrets manager (AWS/GCP Secrets Manager, Vault, doppler) in production.
+- **Logging** — never log passwords, tokens, full JWTs, session IDs, full card numbers, or full PII. Add a log filter that redacts known sensitive keys.
+- **HTTP security** — frameworks handle most of this: Django (CSRF middleware, secure cookies, `SECURE_HSTS_SECONDS`), FastAPI (+ `starlette-csrf` for cookie sessions, `secure` headers). Enumerate CORS origins; never `*` with credentials.
+- **Supply chain** — pin every dependency (`uv pip compile`, `pip-tools`, Poetry lock). `pip-audit` or `safety` in CI for known CVEs. Review `setup.py` / build hooks on new deps — they execute at install.
+- **Input limits** — cap request body size, file uploads, regex input (ReDoS: prefer `re2` or bounded patterns for user-supplied regexes). Timeouts on all outbound HTTP.
+- **Randomness in multiprocessing** — reseed `secrets` / OS random after `fork()`; shared state across workers is a footgun.
+
+```python
+import secrets
+from pathlib import Path
+
+def safe_join(base: Path, user_path: str) -> Path:
+    full = (base / user_path).resolve()
+    full.relative_to(base.resolve())  # raises ValueError if outside base
+    return full
+
+def generate_api_key() -> str:
+    return secrets.token_urlsafe(32)  # never random.choice
+```
 
 ## What to Avoid
 

@@ -92,10 +92,36 @@ try {
 
 ## Security
 
-- Never use `eval()` or `new Function()` with user-supplied input.
-- Sanitize all user input before using it in DOM operations, SQL queries, or shell commands.
-- Use `crypto.randomUUID()` or `crypto.getRandomValues()` for IDs and tokens — never `Math.random()`.
-- Set security headers in HTTP servers (CSP, X-Content-Type-Options, etc.).
+JavaScript runs in the browser *and* on servers — both surfaces are hostile. Treat every external input as attacker-controlled.
+
+- **No dynamic code execution** — never `eval()`, `new Function(str)`, or `setTimeout(str, ...)` with user input. There is no safe way.
+- **XSS** — prefer a framework that auto-escapes (React, Vue, Svelte, lit-html). Never assign user input to `innerHTML`, `outerHTML`, `document.write`, or unescaped template strings. Use `textContent` for plain text. Sanitize untrusted HTML with DOMPurify before rendering.
+- **Prototype pollution** — don't merge user-supplied objects into empty literals with generic deep-merge. Use `Object.create(null)` for user-indexed maps. Reject keys `__proto__`, `constructor`, `prototype`.
+- **Injection** — parameterized SQL always (`pg`, `mysql2`, Drizzle, Prisma). For shell calls, `execFile(cmd, [args])`, never `exec` with user strings. For file paths, resolve and assert containment to prevent path traversal.
+- **SSRF** — when fetching user-supplied URLs on the server, resolve the hostname and reject private/loopback/metadata IPs (`127.0.0.0/8`, `10.0.0.0/8`, `169.254.169.254`, `::1`) before making the request.
+- **Crypto** — use `crypto.randomUUID()`, `crypto.getRandomValues()`, `crypto.subtle` (browser) or `node:crypto` (Node). Never `Math.random()` for tokens, IDs, nonces, or any security-sensitive value. Use `crypto.timingSafeEqual` to compare secrets.
+- **Secrets** — env vars only. Validate at startup and fail fast if missing. Never log full tokens, JWTs, session IDs, passwords, API keys, or full PII.
+- **Auth** — store passwords with `bcrypt`/`argon2`/`scrypt` (high cost factor). Sign JWTs with asymmetric keys (RS256/ES256). Validate `iss`, `aud`, `exp`. Store refresh tokens hashed server-side. Use `HttpOnly`, `Secure`, `SameSite=Lax` or `Strict` cookies for sessions.
+- **CSRF** — for cookie-based sessions, use `SameSite` cookies + a CSRF token on state-changing routes. Token-based auth (Authorization header) is not automatically CSRF-safe if you also accept cookies.
+- **CORS** — enumerate allowed origins explicitly. Never `Access-Control-Allow-Origin: *` together with credentials.
+- **Rate limiting & DoS** — rate-limit auth and expensive endpoints. Cap request body size (`express.json({ limit: '100kb' })`). Set request timeouts.
+- **HTTP security headers** — `helmet` with a strict CSP (`default-src 'self'`, no `unsafe-inline`, nonce-based scripts). Always HSTS, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` locked down.
+- **Dependencies** — `npm audit` / `pnpm audit` in CI. Pin the lockfile. Audit `postinstall` scripts before installing. Prefer `npm ci` in CI/CD.
+- **Client-side storage** — never store JWTs or session tokens in `localStorage` (any XSS reads them). Use `HttpOnly` cookies.
+
+```js
+// Server-side SSRF guard sketch
+import { lookup } from 'node:dns/promises';
+import net from 'node:net';
+
+async function assertPublicHost(hostname) {
+  const { address } = await lookup(hostname);
+  const blocked = net.isIP(address) === 4
+    ? /^(10\.|127\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.)/.test(address)
+    : /^(::1|fe80:|fc|fd)/i.test(address);
+  if (blocked) throw new Error(`blocked host: ${hostname}`);
+}
+```
 
 ## What to Avoid
 

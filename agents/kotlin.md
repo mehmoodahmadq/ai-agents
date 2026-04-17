@@ -160,12 +160,51 @@ fun `getUser returns cached user when available`() = runTest {
 
 ## Security
 
-- Never log sensitive data (passwords, tokens, PII).
-- Use Android Keystore for storing cryptographic keys.
-- Use `EncryptedSharedPreferences` for storing sensitive app data.
-- Certificate pinning for production network calls.
-- Obfuscate with R8/ProGuard in release builds.
-- Never hardcode API keys or secrets — use build config or a secrets manager.
+Kotlin runs in two worlds with different threat models: Android apps (untrusted device, sandboxed, installable anywhere) and JVM services (trusted infra, hostile network). Apply the relevant set.
+
+### Shared (both Android and JVM)
+
+- **No dynamic code** — never `KClass.primaryConstructor!!.call(...)` with user-supplied names, or Groovy/Kotlin scripting engines on untrusted input.
+- **SQL injection** — parameterized queries always. Exposed: `UserTable.select { UserTable.email eq email }`. JDBC: `PreparedStatement` with `?`. Room: `@Query("SELECT ... WHERE id = :id")` with `@Param`-equivalent. Never string-concat user input into SQL.
+- **Command injection** — `ProcessBuilder(listOf(cmd, arg1, arg2))` — never a composed string through `sh -c`.
+- **Path traversal** — resolve and verify containment before reading/writing: `val full = base.resolve(user).normalize(); require(full.startsWith(base))`.
+- **SSRF** — for user-supplied URLs, resolve the host and reject private/loopback/link-local (`10.0.0.0/8`, `127.0.0.0/8`, `169.254.169.254`, `::1`, `fc00::/7`) before dispatch. Set timeouts; disable auto-redirects or re-validate per hop.
+- **Crypto** — `SecureRandom` for tokens, salts, IDs. Never `Random` / `kotlin.random.Random` for security-sensitive values. Use `MessageDigest.isEqual` for constant-time comparison. AES-GCM for symmetric encryption. Never ECB, DES, 3DES, or hand-rolled modes.
+- **Password hashing** — Argon2, bcrypt (cost ≥ 12), or scrypt. Never MD5/SHA-family alone.
+- **Deserialization** — `kotlinx.serialization` is safe by default (no polymorphism without `@Polymorphic` / `SerializersModule`). With Jackson, **never** `enableDefaultTyping`; whitelist via `PolymorphicTypeValidator`. Never use Java `ObjectInputStream` on untrusted bytes.
+- **XML** — disable DTDs and external entities on parsers (XXE). `XMLInputFactory.setProperty("javax.xml.stream.isSupportingExternalEntities", false)` and similar on SAX/DOM factories.
+- **TLS** — TLS 1.2 minimum (1.3 preferred). Never trust-all `X509TrustManager` or hostname verifier `(_, _) -> true` in production. OkHttp `CertificatePinner` for pinned endpoints.
+- **Secrets** — never in source or `gradle.properties` checked into git. Use env vars or a secrets manager. On Android: never ship API secrets in the APK — backend proxies, short-lived tokens, or signed requests.
+- **Logging** — never log passwords, full tokens, session IDs, or full PII. Use a redacting logger / Timber tree in release builds.
+- **Supply chain** — `./gradlew dependencyUpdates`, OWASP Dependency-Check plugin, or Snyk in CI. Pin versions via Gradle version catalogs. Review new deps' Gradle plugins — they run arbitrary code at build time.
+
+### Android-specific
+
+- **Keystore** — generate keys in Android Keystore (`KeyGenParameterSpec`). Keys never leave the secure hardware. Use `setUserAuthenticationRequired(true)` for biometric-gated keys.
+- **EncryptedSharedPreferences / EncryptedFile** — for sensitive app data (tokens, cached PII). Not `SharedPreferences` plaintext.
+- **Exported components** — `android:exported="false"` by default on `Activity` / `Service` / `Receiver` / `Provider`. Only `true` if you genuinely accept external intents, and then validate every extra.
+- **Intent validation** — never trust `intent.getStringExtra(...)` for security decisions. Deep links (`android:autoVerify="true"` App Links) are preferred over custom schemes. Validate every component of incoming URIs.
+- **WebView** — disable `setJavaScriptEnabled(true)` unless necessary. Never `addJavascriptInterface` on a WebView that loads untrusted content (old Android: RCE via reflection). Load only HTTPS. Consider Custom Tabs for OAuth flows instead of WebView.
+- **Certificate pinning** — `OkHttpClient.Builder().certificatePinner(...)` for auth/payment endpoints. Plan rotation.
+- **Network Security Config** — `network_security_config.xml` declaring `cleartextTrafficPermitted="false"` and trust anchors explicitly.
+- **ProGuard / R8** — enable shrinking + obfuscation in release. Not a security boundary, but raises the reverse-engineering bar.
+- **Backup / screenshots** — `android:allowBackup="false"` for apps with sensitive data. `FLAG_SECURE` on sensitive screens to block screenshots and Recents thumbnails.
+- **Biometric auth** — `BiometricPrompt` as a local gate, not the sole auth. Always server-validate sessions.
+- **Clipboard** — don't write tokens/passwords to `ClipboardManager` without marking sensitive (`EXTRA_IS_SENSITIVE` on Android 13+) and clearing promptly.
+- **Permissions** — request at runtime, minimum necessary. Revisit on each API-level bump (scoped storage, notifications, foreground service types).
+- **Rooted / tampered detection** — detect but don't rely on. Server-side verification is authoritative.
+- **App signing & Play Integrity** — use Play App Signing; validate with Play Integrity API for high-value actions.
+
+```kotlin
+import java.security.SecureRandom
+import android.util.Base64
+
+fun generateToken(byteCount: Int = 32): String {
+    val bytes = ByteArray(byteCount)
+    SecureRandom().nextBytes(bytes)
+    return Base64.encodeToString(bytes, Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)
+}
+```
 
 ## Tooling
 

@@ -161,12 +161,29 @@ end
 
 ## Security
 
-- Use `bcrypt` for password hashing (Devise uses it by default).
-- Parameterized queries via ActiveRecord protect against SQL injection — never use string interpolation in `.where`.
-- Use `html_escape` / `h` helper in views. ERB auto-escapes by default — don't use `html_safe` casually.
-- Use `rack-attack` for rate limiting.
-- Keep `secret_key_base` and credentials out of source control — use Rails encrypted credentials.
-- Set security headers with `secure_headers` gem or manually in `config/application.rb`.
+Rails gives you safe defaults for most things, but `html_safe`, `eval`, YAML, and mass assignment are common ways developers undo them.
+
+- **No dynamic code execution** — never `eval`, `instance_eval`, `class_eval`, or `send`/`public_send` with user-supplied method names. Whitelist allowed names if dispatching dynamically.
+- **SQL injection** — `.where("email = ?", params[:email])` or `.where(email: params[:email])` — never `.where("email = '#{params[:email]}'")`. Also watch `.order`, `.group`, `.select`, `.pluck` — they accept raw SQL and do **not** parameterize. Use `Arel.sql` only with constants, never user input.
+- **Mass assignment** — always strong parameters (`params.require(:user).permit(:email, :name)`). Never `User.new(params[:user])` directly. Re-audit permitted attributes when adding privileged columns (e.g., `admin`, `role`).
+- **YAML** — `YAML.safe_load`, never `YAML.load` on untrusted input. Same with `Psych.load`. Rails uses safe loading by default for `config/*.yml` on modern versions; verify on upgrade.
+- **Deserialization** — `Marshal.load` on untrusted data is RCE. Don't cache user-controlled data with `Marshal`. JSON-only for anything crossing a trust boundary.
+- **Command injection** — `system(cmd, arg1, arg2)` / `Open3.capture3(cmd, arg1, arg2)` with separate arguments — never `` `cmd #{user_input}` ``, `system("cmd #{input}")`, or `IO.popen` with a composed string.
+- **Path traversal** — `File.expand_path(user_path, base)` then assert `full.start_with?(base + "/")`. Never `File.read(params[:path])` unsanitized.
+- **SSRF** — for user-supplied URLs, resolve the host and reject private/loopback/metadata (`10.0.0.0/8`, `127.0.0.0/8`, `169.254.169.254`, `::1`). Set `open_timeout` and `read_timeout`. Disable auto-redirects or re-validate each hop.
+- **XSS** — ERB auto-escapes `<%= %>`. Never `html_safe` or `raw` on user input. `sanitize` with an allow-list for rich text (use the `rails-html-sanitizer` defaults or tighter). In Rails 7+, use `<%= content %>` with Action Text for user-authored HTML.
+- **CSRF** — `protect_from_forgery with: :exception` is on by default — keep it. Use `skip_before_action :verify_authenticity_token` only for token-authenticated APIs (and preferably use a separate `ApiController` base).
+- **Authorization (IDOR)** — always scope queries to `current_user`: `current_user.posts.find(params[:id])`, not `Post.find(params[:id])`. Use Pundit or CanCanCan for policy-based authorization.
+- **Password hashing** — `has_secure_password` (bcrypt, cost 12+) or Devise (bcrypt by default). Never MD5/SHA for passwords. Use `ActiveSupport::SecurityUtils.secure_compare` for token comparison.
+- **Crypto** — `SecureRandom.hex`, `SecureRandom.urlsafe_base64`, `SecureRandom.uuid` for tokens. Never `rand` or `Random.new`. For encryption, `ActiveSupport::MessageEncryptor` or Rails' encrypted attributes (`encrypts :ssn`, Rails 7+).
+- **Secrets** — Rails encrypted credentials (`config/credentials.yml.enc` + `config/master.key` — **master.key never committed**). Or env vars via `dotenv-rails` in dev; a secrets manager in prod. Never commit `.env`.
+- **Session & cookies** — `secure: true, httponly: true, same_site: :lax` (or `:strict`). Rotate `secret_key_base` handled via credentials. Expire sessions.
+- **Security headers** — `secure_headers` gem or manual config: CSP (strict, no `unsafe-inline`), HSTS (with preload after verifying), `X-Content-Type-Options: nosniff`, `Referrer-Policy`.
+- **Rate limiting** — `rack-attack` with throttles on login, signup, password reset, expensive endpoints. Block obvious abuse patterns.
+- **File uploads** — validate content type server-side (MIME sniffing, not just extension). Store outside the web root or use signed URLs. Scan for malware if accepting arbitrary files. Limit size at the controller and the web server.
+- **Gems & supply chain** — `bundle audit` in CI. Pin major versions. Check `Gemfile.lock` diffs carefully on updates. Review gems' `ext/` and post-install hooks — they execute at install time.
+- **Logging** — Rails filters `password`, `password_confirmation` by default. Add `token`, `api_key`, `authorization`, `ssn`, etc. via `config.filter_parameters`. Never log full request bodies on auth endpoints.
+- **Open redirects** — validate `redirect_to params[:url]` destinations against an allow-list. `redirect_to` in Rails 7+ defaults to `allow_other_host: false` — keep it.
 
 ## Tooling
 

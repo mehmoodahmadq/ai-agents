@@ -136,10 +136,54 @@ func TestAdd(t *testing.T) {
 - Use `go mod tidy` to keep `go.mod` and `go.sum` clean.
 - Pin indirect dependencies explicitly if they have security implications.
 
+## Security
+
+Go has fewer footguns than most languages, but the ones it has are nasty. Treat every boundary as hostile.
+
+- **Injection** — parameterized SQL always: `db.QueryContext(ctx, "SELECT ... WHERE id = $1", id)`. Never `fmt.Sprintf` into queries. For shell, `exec.CommandContext(ctx, name, args...)` with a slice — never build a string and hand it to `sh -c`.
+- **Input validation** — validate every HTTP/gRPC input at the handler boundary. Use `go-playground/validator` or hand-rolled checks. Never trust lengths, ranges, or formats.
+- **SSRF** — when fetching user-supplied URLs, resolve the host and reject private/loopback/metadata ranges (`10.0.0.0/8`, `127.0.0.0/8`, `169.254.169.254`, `::1`, `fc00::/7`). Set a `net.Dialer.Control` to reject at the socket layer:
+    ```go
+    dialer := &net.Dialer{Control: func(network, address string, c syscall.RawConn) error {
+        host, _, _ := net.SplitHostPort(address)
+        ip := net.ParseIP(host)
+        if ip.IsPrivate() || ip.IsLoopback() || ip.IsLinkLocalUnicast() {
+            return fmt.Errorf("blocked address: %s", address)
+        }
+        return nil
+    }}
+    ```
+- **Path traversal** — `filepath.Clean` is not enough. Resolve and check containment: `full := filepath.Join(base, user); if !strings.HasPrefix(filepath.Clean(full), filepath.Clean(base)+string(os.PathSeparator)) { return ErrBadPath }`.
+- **Crypto** — `crypto/rand` for all random values (`rand.Read`, `rand.Int`). Never `math/rand` for tokens, IDs, nonces. Use `crypto/subtle.ConstantTimeCompare` for secret comparison.
+- **Password hashing** — `golang.org/x/crypto/bcrypt` (cost ≥ 12) or `argon2`. Never MD5/SHA family for passwords.
+- **TLS** — `tls.Config{MinVersion: tls.VersionTLS12}` minimum (TLS 1.3 preferred). Never `InsecureSkipVerify: true` in production. Verify server names for outbound connections.
+- **Secrets** — env vars via a typed config struct, validated at startup. Never log secrets. Never commit `.env`. Use a secrets manager in production.
+- **HTTP server hardening** — always set `ReadTimeout`, `ReadHeaderTimeout`, `WriteTimeout`, `IdleTimeout`, `MaxHeaderBytes` on `http.Server`. The zero values are unlimited and Slowloris-exploitable. Cap request bodies with `http.MaxBytesReader`.
+- **Response headers** — `X-Content-Type-Options: nosniff`, `Strict-Transport-Security`, `Referrer-Policy: strict-origin-when-cross-origin`, tight CSP. CORS origins enumerated — never `*` with credentials.
+- **Integer overflow** — be careful when converting between `int`, `int32`, `int64`, and `uint`. Validate ranges before narrowing.
+- **Goroutine DoS** — don't spawn an unbounded goroutine per request. Use worker pools or `errgroup.SetLimit`.
+- **Supply chain** — `go mod verify` in CI. `govulncheck ./...` for known CVEs in std lib and deps. Pin `go.sum`. Review `go.mod` diffs in PRs carefully.
+- **Logging** — use `log/slog` (std lib, 1.21+). Redact tokens, passwords, session IDs, full PII before logging.
+- **Template output** — `html/template` auto-escapes; `text/template` does not. Never render untrusted data with `text/template` into HTML.
+- **YAML / XML** — `gopkg.in/yaml.v3` is safe by default. XML: disable external entities, avoid unbounded expansion.
+
+```go
+import "crypto/rand"
+
+func GenerateToken(n int) (string, error) {
+    b := make([]byte, n)
+    if _, err := rand.Read(b); err != nil {
+        return "", fmt.Errorf("token rand: %w", err)
+    }
+    return base64.RawURLEncoding.EncodeToString(b), nil
+}
+```
+
 ## Tooling
 
 - **Formatter**: `gofmt` / `goimports` — non-negotiable, always run before commit.
-- **Linter**: `golangci-lint` with `errcheck`, `staticcheck`, `gosec`, `revive` enabled.
+- **Linter**: `golangci-lint` with `errcheck`, `staticcheck`, `gosec`, `revive`, `bodyclose`, `gocritic` enabled.
+- **Vulnerability scanning**: `govulncheck ./...` in CI — catches known CVEs in std lib and modules.
 - **Testing**: `go test ./...` with `-race` flag in CI to catch data races.
 - **Build**: `go build` — no custom build systems needed for most projects.
 

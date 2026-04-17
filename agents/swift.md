@@ -169,12 +169,53 @@ func emailValidation(email: String) {
 }
 ```
 
+## Security
+
+Apple's platforms give you strong sandboxing and Keychain, but app-level security (network, auth, storage, inputs) is still your responsibility.
+
+- **Secrets** — never hardcode API keys, tokens, or secrets in source or plist. Use `.xcconfig` files kept out of git for build-time config, and Keychain for runtime secrets. Consider that anything shipped in the binary is reverse-engineerable.
+- **Keychain** — use Keychain for passwords, tokens, and sensitive credentials. Set the most restrictive `kSecAttrAccessible` that works (e.g., `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly` for most app secrets — never syncable to iCloud for device-local secrets).
+- **Data Protection** — set file protection levels (`.completeUnlessOpen`, `.completeUntilFirstUserAuthentication`) on sensitive files written to disk. Don't store sensitive data in `UserDefaults` — it's unencrypted.
+- **App Transport Security (ATS)** — keep ATS enabled. TLS 1.2 minimum (1.3 preferred). Don't add `NSAllowsArbitraryLoads` or per-domain exceptions unless you genuinely must, and document why.
+- **Certificate pinning** — for high-value endpoints (auth, payments), pin the server certificate or public key via `URLSessionDelegate` / `URLAuthenticationChallenge`. Plan for rotation.
+- **Crypto** — `CryptoKit` for modern symmetric/asymmetric crypto (AES-GCM, ChaChaPoly, Ed25519, P-256/384/521). Never write your own. `SecRandomCopyBytes` for cryptographic randomness — never `Int.random(in:)` or `arc4random` for security-sensitive values.
+- **Password hashing** — if hashing passwords client-side (rare — usually done server-side), use Argon2/scrypt via a vetted library. Never MD5/SHA-family alone.
+- **Authentication** — `AuthenticationServices` (`ASWebAuthenticationSession` for OAuth, `ASAuthorizationController` for Sign in with Apple). Never embed user credentials in a `WKWebView` for OAuth — it's both an Apple policy violation and a phishing risk.
+- **Biometric auth** — `LocalAuthentication` framework. Use biometrics as a local gate, not as the only auth factor. Always fall back to a server-validated credential.
+- **WebView** — `WKWebView` only (`UIWebView` is deprecated and insecure). Disable `javaScriptEnabled` for static content. Never inject untrusted content into a WebView with JS bridges — sanitize or use `WKContentWorld` isolation.
+- **URL handling & deep links** — validate every field of incoming `URL` from Universal Links / custom schemes. Never trust scheme parameters for auth or navigation decisions without verification. Use Universal Links over custom schemes where possible — custom schemes can be claimed by other apps.
+- **SQL** — if using SQLite directly via `sqlite3` or FMDB, parameterize: `?` placeholders + `sqlite3_bind_*`. `GRDB` and Core Data handle this by default. Never string-interpolate user input into SQL.
+- **Pasteboard** — don't write sensitive values (tokens, passwords) to `UIPasteboard.general` without `expirationDate` and `isSensitive` hints. Clear after use.
+- **Logging** — `Logger` (unified logging, `os.log`) with `privacy: .private` on any PII, tokens, or user-identifiable values. `.public` only for diagnostic data that is genuinely non-sensitive.
+- **Background / screenshots** — blur or replace sensitive screens in `applicationDidEnterBackground` / SwiftUI `scenePhase == .inactive` so the app-switcher snapshot doesn't leak data.
+- **Jailbreak / tamper detection** — detect but don't rely on it as your security boundary. Server-side verification is authoritative.
+- **Third-party SDKs** — audit carefully. Each SDK is code running with your app's permissions. Review privacy manifests (iOS 17+ requires `PrivacyInfo.xcprivacy`).
+- **App Store Privacy** — declare data collection truthfully in the Privacy Manifest and App Store Connect. Mislabelling is an App Review rejection and a trust failure.
+- **Supply chain** — Swift Package Manager resolves and pins via `Package.resolved` — commit it. Review new dependencies' source before adding.
+
+```swift
+import CryptoKit
+import Security
+
+func generateToken(byteCount: Int = 32) -> String {
+    var bytes = [UInt8](repeating: 0, count: byteCount)
+    let status = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
+    precondition(status == errSecSuccess, "SecRandomCopyBytes failed")
+    return Data(bytes).base64EncodedString()
+}
+
+func sealMessage(_ plaintext: Data, key: SymmetricKey) throws -> Data {
+    try AES.GCM.seal(plaintext, using: key).combined!
+}
+```
+
 ## Tooling
 
 - **Swift version**: Swift 6 for new projects (enables strict concurrency checking).
 - **Formatter**: SwiftFormat + SwiftLint. Enforce in CI.
-- **Package manager**: Swift Package Manager — prefer it over CocoaPods for new projects.
+- **Package manager**: Swift Package Manager — prefer it over CocoaPods for new projects. Commit `Package.resolved`.
 - **Xcode**: use `.xcconfig` for build settings, not manual Xcode UI tweaks (they're hard to review in git).
+- **Privacy**: include `PrivacyInfo.xcprivacy` declaring required-reason APIs (iOS 17+).
 
 ## What to Avoid
 

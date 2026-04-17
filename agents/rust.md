@@ -133,6 +133,41 @@ async fn load_page(id: &str) -> Result<Page, AppError> {
 - **Dependency auditing**: `cargo audit` for known vulnerabilities.
 - **Edition**: Rust 2021 for all new projects.
 
+## Security
+
+Rust's type system eliminates entire bug classes (UAF, data races, double-free), but memory safety is not the same as application security. The attacker-reachable boundary is still your responsibility.
+
+- **`unsafe` hygiene** — every `unsafe` block needs a `// SAFETY:` comment explaining why the invariants hold. Keep the block as small as possible. Prefer safe abstractions from well-audited crates (`bytes`, `arrayvec`) over hand-rolled `unsafe`.
+- **Never `unwrap()` on user input** — a panic in a server path is a DoS. `?` for propagation, `ok_or_else` for defaulting, explicit matching for control flow.
+- **Integer overflow** — in release builds, overflow wraps silently. Use `checked_add`/`checked_mul` on values derived from input. Enable `overflow-checks = true` in release for security-sensitive crates.
+- **Injection** — use `sqlx` / `sea-orm` / `diesel` parameterized queries. Never `format!` into SQL. For shell: `std::process::Command::new(cmd).arg(arg)` — never pipe user strings into `sh -c`.
+- **Path traversal** — resolve user-supplied paths with `canonicalize()` and check `starts_with(base.canonicalize()?)` before use.
+- **SSRF** — for user-supplied URLs, resolve the host and reject private/loopback/link-local/metadata ranges (`10.0.0.0/8`, `127.0.0.0/8`, `169.254.169.254`, `::1`, `fc00::/7`) before dispatch.
+- **Crypto** — never roll your own. Use `ring`, `rustcrypto`, or `rustls` for TLS. `rand::rngs::OsRng` for cryptographic randomness — not `thread_rng()` for tokens. Use `subtle::ConstantTimeEq` for secret comparison.
+- **Password hashing** — `argon2` crate. Never MD5/SHA for passwords.
+- **TLS** — `rustls` (memory-safe, default-secure) preferred over `native-tls`. Never disable certificate verification in production.
+- **Deserialization** — validate after deserialization. `serde` with `deny_unknown_fields` on structs that cross a boundary. Enforce size limits before deserializing untrusted bytes.
+- **Input limits** — cap request bodies (`axum::extract::DefaultBodyLimit`), set read/write timeouts, limit concurrent connections. Panics and OOM on unbounded input are DoS.
+- **Secrets in memory** — use `secrecy::Secret<T>` or `zeroize::Zeroizing<T>` to clear sensitive values on drop. Never derive `Debug` on structs that hold secrets.
+- **Logging** — `tracing` with structured fields. Filter or skip secrets. Never log tokens, passwords, or full PII.
+- **Dependencies** — `cargo audit` and `cargo deny` in CI. Keep the dep tree shallow — `cargo tree` regularly. Review new deps' `build.rs` — it runs at compile time with full permissions.
+- **`build.rs` / proc macros** — they execute arbitrary code on your developer/CI machines. Audit these before adding a dep.
+- **FFI** — every `extern "C"` boundary is an unsafe contract. Validate pointers, lengths, and lifetimes. Never expose `unsafe` structs directly to C callers without a wrapper.
+
+```rust
+use secrecy::{ExposeSecret, Secret};
+
+pub struct Config {
+    pub db_url: String,
+    pub jwt_secret: Secret<String>, // redacted in Debug, zeroed on drop
+}
+
+fn verify(provided: &[u8], expected: &[u8]) -> bool {
+    use subtle::ConstantTimeEq;
+    provided.ct_eq(expected).into() // timing-safe comparison
+}
+```
+
 ## What to Avoid
 
 - `unwrap()` and `expect()` in library code — return `Result` instead.

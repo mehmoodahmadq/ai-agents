@@ -163,12 +163,46 @@ public void IsValidEmail_ReturnsExpected(string email, bool expected)
 
 ## Security
 
-- Use ASP.NET Core Identity or a dedicated auth library — never roll your own auth.
-- Hash passwords with `PasswordHasher<T>` (PBKDF2) or add BCrypt.Net-Next.
-- Use JWT bearer tokens with short expiry. Validate `iss`, `aud`, `exp`. Store refresh tokens securely.
-- Enable CORS explicitly — never `AllowAnyOrigin` in production.
-- Use `[Authorize]` with policies. Deny by default, allow explicitly.
-- Parameterized EF Core queries protect against SQL injection automatically — never use raw SQL with user input.
+.NET's defaults are safer than most stacks, but defaults aren't enough. Explicit hardening required for anything public.
+
+- **Authentication & authorization** — ASP.NET Core Identity or a dedicated identity provider (Auth0, Azure AD, Keycloak). Never roll your own. Use `[Authorize]` policies; deny by default with `RequireAuthenticatedUser()` as the fallback policy. Authorize per-resource (not just per-route) to prevent IDOR — verify the authenticated user owns the `id` they're operating on.
+- **Password hashing** — `PasswordHasher<T>` (PBKDF2, iterations ≥ 100k on modern .NET) or `BCrypt.Net-Next` with work factor ≥ 12, or `Konscious.Security.Cryptography.Argon2`. Never MD5/SHA for passwords.
+- **JWT** — asymmetric keys (RS256/ES256) for distributed verification. Validate `iss`, `aud`, `exp`, `nbf`, signing algorithm. `RequireSignedTokens = true`. Use `ValidateIssuerSigningKey = true`. Short access-token expiry (≤ 15 min) + refresh tokens stored hashed server-side.
+- **SQL injection** — EF Core LINQ is parameterized. `FromSqlRaw($"... {userInput}")` with string interpolation is **not** — use `FromSqlInterpolated` or parameters: `FromSqlRaw("... WHERE id = {0}", userInput)`. Dapper: always parameterized.
+- **Command injection** — `Process.Start(new ProcessStartInfo { FileName = "tool", ArgumentList = { arg1, arg2 } })` — never compose `Arguments` as a string with user input. Prefer `ArgumentList` (available on modern .NET).
+- **Path traversal** — `Path.GetFullPath(Path.Combine(baseDir, userPath))` then verify `full.StartsWith(baseDir)` with `OrdinalIgnoreCase` on Windows and `Ordinal` elsewhere.
+- **SSRF** — for user-supplied URLs, resolve the host and block private/loopback/link-local/metadata (`10.0.0.0/8`, `127.0.0.0/8`, `169.254.169.254`, `::1`) before calling `HttpClient.SendAsync`. Use `IHttpClientFactory` named clients with configured handlers.
+- **Deserialization** — `System.Text.Json` is safe by default (no polymorphism without opt-in). If using `Newtonsoft.Json`, **never** `TypeNameHandling.All` or `Auto` — it's an RCE gadget. Prefer `TypeNameHandling.None` with a `SerializationBinder` whitelist. Avoid `BinaryFormatter` entirely — it's deprecated in .NET 5+ and unsafe.
+- **XML** — `XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null }`. Never accept untrusted XML with default settings.
+- **Crypto** — `RandomNumberGenerator.GetBytes()` / `GetInt32()` for cryptographic randomness. Never `System.Random` for tokens or IDs. Use `CryptographicOperations.FixedTimeEquals` for secret comparison. For symmetric crypto, AES-GCM (`AesGcm` class). Never DES, 3DES, ECB mode, or hand-rolled modes.
+- **TLS** — TLS 1.2 minimum (1.3 preferred). Never set `ServerCertificateCustomValidationCallback` to return `true` in production. Configure `HttpClientHandler.SslProtocols` explicitly.
+- **HTTPS & HSTS** — `app.UseHttpsRedirection()` and `app.UseHsts()` in non-dev environments. Set `HstsOptions.Preload = true` and `IncludeSubDomains = true` after you've verified all subdomains.
+- **CORS** — enumerate origins via `.WithOrigins(...)`. Never `.AllowAnyOrigin().AllowCredentials()` — the framework will throw, but don't try to work around it.
+- **CSRF** — `[ValidateAntiForgeryToken]` on cookie-authenticated state-changing endpoints. Not needed for pure JWT-header APIs, but any mixed-mode endpoint needs it.
+- **Antiforgery** — `services.AddAntiforgery()` and validate on POST/PUT/DELETE for cookie auth.
+- **Input limits** — `KestrelServerLimits.MaxRequestBodySize`, `RequestFormLimits`, per-endpoint `[RequestSizeLimit]`. Timeouts via `RequestTimeouts` (new in .NET 8).
+- **Secrets** — never in `appsettings.json` checked into git. Use User Secrets in dev, environment variables + Azure Key Vault / AWS Secrets Manager / `dotnet user-jwts` in prod.
+- **Logging** — `ILogger<T>` with structured logging. Scrub tokens, passwords, full PII via a log filter. Never `_logger.LogInformation($"Request body: {body}")` on auth endpoints.
+- **Supply chain** — `dotnet list package --vulnerable --include-transitive` in CI. Pin versions via `Directory.Packages.props`. Review `.nupkg` `build` / `buildTransitive` targets — they run at build time.
+- **Rate limiting** — built-in `AddRateLimiter` (.NET 7+). Apply to auth endpoints, expensive queries, and per-user quotas.
+
+```csharp
+builder.Services.AddAuthorization(options =>
+{
+    options.FallbackPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+});
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("auth", o =>
+    {
+        o.PermitLimit = 5;
+        o.Window = TimeSpan.FromMinutes(1);
+    });
+});
+```
 
 ## Tooling
 
