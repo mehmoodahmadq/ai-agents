@@ -35,6 +35,13 @@ Each agent file contains a system prompt that works with any model or tool that 
 | [typescript](agents/typescript.md) | Type-safe TypeScript — strict mode, Zod, modern patterns |
 | [javascript](agents/javascript.md) | Modern JS — ES2020+, async/await, no unnecessary deps |
 | [python](agents/python.md) | Idiomatic Python — type hints, Pydantic, Ruff, asyncio |
+| [go](agents/go.md) | Idiomatic Go — explicit errors, interfaces, structured concurrency |
+| [rust](agents/rust.md) | Systems Rust — ownership, Result, zero-cost abstractions, Tokio |
+| [java](agents/java.md) | Modern Java 21 — records, Spring Boot, clean architecture |
+| [csharp](agents/csharp.md) | Modern C# 12 / .NET 8 — nullable safety, ASP.NET Core, async |
+| [ruby](agents/ruby.md) | Idiomatic Ruby — Rails conventions, service objects, RSpec |
+| [swift](agents/swift.md) | Modern Swift — SwiftUI, Swift Concurrency, value semantics |
+| [kotlin](agents/kotlin.md) | Modern Kotlin — coroutines, Flow, Jetpack Compose, MVVM |
 
 ## Contributing
 
