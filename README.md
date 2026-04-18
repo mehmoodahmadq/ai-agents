@@ -84,6 +84,12 @@ client.messages.create(
 | [threat-modeler](agents/security/threat-modeler.md) | STRIDE threat modeling | Trust boundaries, ranked threats, mitigations tied to owners |
 | [secure-code-reviewer](agents/security/secure-code-reviewer.md) | PR-level secure review | Secrets, crypto, authn/authz, validation, logging/PII |
 | [dependency-auditor](agents/security/dependency-auditor.md) | Supply-chain audit | CVEs, typosquats, install scripts, lockfile & SBOM hygiene |
+| [secrets-scanner](agents/security/secrets-scanner.md) | Credential leak detection | Source, git history, Docker layers, CI logs; rotation-first remediation |
+| [authn-authz-reviewer](agents/security/authn-authz-reviewer.md) | Identity & access control | Login, MFA, sessions, OAuth/OIDC, JWT, IDOR/BOLA, multi-tenant isolation |
+| [crypto-reviewer](agents/security/crypto-reviewer.md) | Cryptographic review | Algorithms, AEAD, KDFs, PRNGs, key management, TLS, protocol composition |
+| [iac-security-reviewer](agents/security/iac-security-reviewer.md) | IaC misconfiguration | Terraform, CloudFormation, K8s, Dockerfiles, CI/CD pipelines |
+| [api-security-reviewer](agents/security/api-security-reviewer.md) | OWASP API Top 10 (2023) | BOLA, BOPLA, function-level authz, resource consumption, GraphQL/gRPC |
+| [privacy-reviewer](agents/security/privacy-reviewer.md) | Privacy & data protection | GDPR/CCPA, retention, DSAR, consent, PII in logs/analytics, sub-processors |
 
 ---
 
@@ -132,7 +138,9 @@ Agents are organised by domain under `agents/`. Current layout:
 ```
 agents/
   languages/     typescript, javascript, python, go, rust, java, csharp, ruby, swift, kotlin, php, erlang
-  security/      owasp-reviewer, threat-modeler, secure-code-reviewer, dependency-auditor
+  security/      owasp-reviewer, threat-modeler, secure-code-reviewer, dependency-auditor,
+                 secrets-scanner, authn-authz-reviewer, crypto-reviewer,
+                 iac-security-reviewer, api-security-reviewer, privacy-reviewer
 ```
 
 Planned domains:
