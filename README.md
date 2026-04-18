@@ -25,7 +25,7 @@ Most "AI agents" repositories are catalogs: they list use cases, describe what a
 ```bash
 # From the root of your project
 mkdir -p .claude/agents
-cp /path/to/ai-agents/agents/typescript.md .claude/agents/
+cp /path/to/ai-agents/agents/languages/typescript.md .claude/agents/
 ```
 
 Then invoke in Claude Code:
@@ -43,7 +43,7 @@ Everything below the `---` frontmatter block is a plain system prompt. Copy it i
 ```python
 import anthropic
 
-with open("agents/python.md") as f:
+with open("agents/languages/python.md") as f:
     content = f.read()
     system_prompt = content.split("---", 2)[2].strip()
 
@@ -59,18 +59,20 @@ client.messages.create(
 
 ## Available agents
 
+### Languages
+
 | Agent | Focus | Highlights |
 |-------|-------|------------|
-| [typescript](agents/typescript.md) | Type-safe TypeScript | Strict mode, Zod, discriminated unions, `satisfies`, no `any` |
-| [javascript](agents/javascript.md) | Modern JavaScript | ES2020+, async/await, Web APIs, zero-dep mindset |
-| [python](agents/python.md) | Idiomatic Python | Type hints, Pydantic, asyncio, Ruff, mypy strict |
-| [go](agents/go.md) | Production Go | Explicit errors, small interfaces, errgroup, context propagation |
-| [rust](agents/rust.md) | Systems Rust | Ownership, `thiserror`/`anyhow`, Tokio, zero-cost abstractions |
-| [java](agents/java.md) | Modern Java 21 | Records, sealed classes, Spring Boot, constructor injection |
-| [csharp](agents/csharp.md) | C# 12 / .NET 8 | Nullable safety, ASP.NET Core, EF Core, async end-to-end |
-| [ruby](agents/ruby.md) | Idiomatic Ruby / Rails | Service objects, thin controllers, RSpec, security-first Rails |
-| [swift](agents/swift.md) | Modern Swift | SwiftUI, Swift Concurrency, `Actor`, value semantics |
-| [kotlin](agents/kotlin.md) | Modern Kotlin | Coroutines, Flow, Compose, MVVM, null safety |
+| [typescript](agents/languages/typescript.md) | Type-safe TypeScript | Strict mode, Zod, discriminated unions, `satisfies`, no `any` |
+| [javascript](agents/languages/javascript.md) | Modern JavaScript | ES2020+, async/await, Web APIs, zero-dep mindset |
+| [python](agents/languages/python.md) | Idiomatic Python | Type hints, Pydantic, asyncio, Ruff, mypy strict |
+| [go](agents/languages/go.md) | Production Go | Explicit errors, small interfaces, errgroup, context propagation |
+| [rust](agents/languages/rust.md) | Systems Rust | Ownership, `thiserror`/`anyhow`, Tokio, zero-cost abstractions |
+| [java](agents/languages/java.md) | Modern Java 21 | Records, sealed classes, Spring Boot, constructor injection |
+| [csharp](agents/languages/csharp.md) | C# 12 / .NET 8 | Nullable safety, ASP.NET Core, EF Core, async end-to-end |
+| [ruby](agents/languages/ruby.md) | Idiomatic Ruby / Rails | Service objects, thin controllers, RSpec, security-first Rails |
+| [swift](agents/languages/swift.md) | Modern Swift | SwiftUI, Swift Concurrency, `Actor`, value semantics |
+| [kotlin](agents/languages/kotlin.md) | Modern Kotlin | Coroutines, Flow, Compose, MVVM, null safety |
 
 ### Security
 
@@ -123,17 +125,23 @@ If a PR adds an agent that doesn't meet all six, it doesn't merge.
 
 ## Roadmap
 
-Language agents are flat under `agents/`; specialty agents live in subdirectories (`agents/security/` is the first). Once the collection grows past ~20 agents, language files will move into `agents/languages/` and the rest will be organised by domain:
+Agents are organised by domain under `agents/`. Current layout:
 
 ```
 agents/
-  languages/     typescript, python, go, rust, ...
+  languages/     typescript, javascript, python, go, rust, java, csharp, ruby, swift, kotlin
+  security/      owasp-reviewer, threat-modeler, secure-code-reviewer, dependency-auditor
+```
+
+Planned domains:
+
+```
+agents/
   frontend/      react, vue, svelte, a11y, css
   backend/       express, fastapi, django, database-design
   devops/        docker, kubernetes, terraform, ci-cd
-  security/      owasp-reviewer, threat-modeler, secure-code-reviewer, dependency-auditor
   data/          sql, pipelines, ml-workflows
-  mobile/        react-native (swift and kotlin move here)
+  mobile/        react-native (swift and kotlin may move here)
 ```
 
 Naming: `<stack-or-tool>.md` — lowercase, hyphenated, no version numbers in filenames.
