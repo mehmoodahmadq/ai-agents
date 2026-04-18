@@ -72,6 +72,15 @@ client.messages.create(
 | [swift](agents/swift.md) | Modern Swift | SwiftUI, Swift Concurrency, `Actor`, value semantics |
 | [kotlin](agents/kotlin.md) | Modern Kotlin | Coroutines, Flow, Compose, MVVM, null safety |
 
+### Security
+
+| Agent | Focus | Highlights |
+|-------|-------|------------|
+| [owasp-reviewer](agents/security/owasp-reviewer.md) | OWASP Top 10 (2021) audit | Language-agnostic, severity-ranked findings with concrete fixes |
+| [threat-modeler](agents/security/threat-modeler.md) | STRIDE threat modeling | Trust boundaries, ranked threats, mitigations tied to owners |
+| [secure-code-reviewer](agents/security/secure-code-reviewer.md) | PR-level secure review | Secrets, crypto, authn/authz, validation, logging/PII |
+| [dependency-auditor](agents/security/dependency-auditor.md) | Supply-chain audit | CVEs, typosquats, install scripts, lockfile & SBOM hygiene |
+
 ---
 
 ## Agent file format
@@ -114,7 +123,7 @@ If a PR adds an agent that doesn't meet all six, it doesn't merge.
 
 ## Roadmap
 
-Currently flat under `agents/`. Once the collection grows past ~20 agents, it will be reorganized by domain:
+Language agents are flat under `agents/`; specialty agents live in subdirectories (`agents/security/` is the first). Once the collection grows past ~20 agents, language files will move into `agents/languages/` and the rest will be organised by domain:
 
 ```
 agents/
@@ -122,7 +131,7 @@ agents/
   frontend/      react, vue, svelte, a11y, css
   backend/       express, fastapi, django, database-design
   devops/        docker, kubernetes, terraform, ci-cd
-  security/      threat-modeling, owasp-review, secure-code-review
+  security/      owasp-reviewer, threat-modeler, secure-code-reviewer, dependency-auditor
   data/          sql, pipelines, ml-workflows
   mobile/        react-native (swift and kotlin move here)
 ```
