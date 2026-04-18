@@ -73,6 +73,8 @@ client.messages.create(
 | [ruby](agents/languages/ruby.md) | Idiomatic Ruby / Rails | Service objects, thin controllers, RSpec, security-first Rails |
 | [swift](agents/languages/swift.md) | Modern Swift | SwiftUI, Swift Concurrency, `Actor`, value semantics |
 | [kotlin](agents/languages/kotlin.md) | Modern Kotlin | Coroutines, Flow, Compose, MVVM, null safety |
+| [php](agents/languages/php.md) | Modern PHP 8.3+ | `strict_types`, readonly classes, enums, PHPStan max, Symfony/Laravel |
+| [erlang](agents/languages/erlang.md) | Erlang / OTP | Supervision trees, gen_server, Dialyzer, let-it-crash, rebar3 |
 
 ### Security
 
@@ -129,7 +131,7 @@ Agents are organised by domain under `agents/`. Current layout:
 
 ```
 agents/
-  languages/     typescript, javascript, python, go, rust, java, csharp, ruby, swift, kotlin
+  languages/     typescript, javascript, python, go, rust, java, csharp, ruby, swift, kotlin, php, erlang
   security/      owasp-reviewer, threat-modeler, secure-code-reviewer, dependency-auditor
 ```
 
