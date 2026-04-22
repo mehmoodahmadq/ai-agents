@@ -91,6 +91,14 @@ client.messages.create(
 | [api-security-reviewer](agents/security/api-security-reviewer.md) | OWASP API Top 10 (2023) | BOLA, BOPLA, function-level authz, resource consumption, GraphQL/gRPC |
 | [privacy-reviewer](agents/security/privacy-reviewer.md) | Privacy & data protection | GDPR/CCPA, retention, DSAR, consent, PII in logs/analytics, sub-processors |
 
+### Data
+
+| Agent | Focus | Highlights |
+|-------|-------|------------|
+| [sql](agents/data/sql.md) | Production SQL | Postgres/MySQL/SQLite + OLAP; schema, indexes, plans, parameterization, RLS |
+| [data-pipelines](agents/data/data-pipelines.md) | Batch & streaming pipelines | ELT, medallion, dbt, Airflow/Dagster, idempotency, backfills, observability |
+| [ml-workflows](agents/data/ml-workflows.md) | Production ML | Reproducibility, eval, train/serve parity, deployment, drift monitoring, security |
+
 ---
 
 ## Agent file format
@@ -141,6 +149,7 @@ agents/
   security/      owasp-reviewer, threat-modeler, secure-code-reviewer, dependency-auditor,
                  secrets-scanner, authn-authz-reviewer, crypto-reviewer,
                  iac-security-reviewer, api-security-reviewer, privacy-reviewer
+  data/          sql, data-pipelines, ml-workflows
 ```
 
 Planned domains:
@@ -150,7 +159,6 @@ agents/
   frontend/      react, vue, svelte, a11y, css
   backend/       express, fastapi, django, database-design
   devops/        docker, kubernetes, terraform, ci-cd
-  data/          sql, pipelines, ml-workflows
   mobile/        react-native (swift and kotlin may move here)
 ```
 
