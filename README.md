@@ -99,6 +99,16 @@ client.messages.create(
 | [data-pipelines](agents/data/data-pipelines.md) | Batch & streaming pipelines | ELT, medallion, dbt, Airflow/Dagster, idempotency, backfills, observability |
 | [ml-workflows](agents/data/ml-workflows.md) | Production ML | Reproducibility, eval, train/serve parity, deployment, drift monitoring, security |
 
+### Frontend
+
+| Agent | Focus | Highlights |
+|-------|-------|------------|
+| [react](agents/frontend/react.md) | React 18/19 | Composition API, hooks rules, RSC/Next App Router, TanStack Query, Suspense, Compiler-aware |
+| [vue](agents/frontend/vue.md) | Vue 3 / Nuxt 3 | Composition API + `<script setup>`, runes-style reactivity, Pinia setup stores, server actions |
+| [svelte](agents/frontend/svelte.md) | Svelte 5 / SvelteKit | Runes (`$state`/`$derived`/`$effect`), form actions, server vs universal load, env separation |
+| [css](agents/frontend/css.md) | Modern CSS | `@layer`, container queries, design tokens, logical properties, `:has()`, motion preferences |
+| [accessibility](agents/frontend/accessibility.md) | WCAG 2.2 AA | Semantic HTML, keyboard, focus management, ARIA patterns, screen-reader testing |
+
 ---
 
 ## Agent file format
@@ -150,13 +160,13 @@ agents/
                  secrets-scanner, authn-authz-reviewer, crypto-reviewer,
                  iac-security-reviewer, api-security-reviewer, privacy-reviewer
   data/          sql, data-pipelines, ml-workflows
+  frontend/      react, vue, svelte, css, accessibility
 ```
 
 Planned domains:
 
 ```
 agents/
-  frontend/      react, vue, svelte, a11y, css
   backend/       express, fastapi, django, database-design
   devops/        docker, kubernetes, terraform, ci-cd
   mobile/        react-native (swift and kotlin may move here)
