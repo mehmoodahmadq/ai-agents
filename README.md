@@ -109,6 +109,16 @@ client.messages.create(
 | [css](agents/frontend/css.md) | Modern CSS | `@layer`, container queries, design tokens, logical properties, `:has()`, motion preferences |
 | [accessibility](agents/frontend/accessibility.md) | WCAG 2.2 AA | Semantic HTML, keyboard, focus management, ARIA patterns, screen-reader testing |
 
+### Backend
+
+| Agent | Focus | Highlights |
+|-------|-------|------------|
+| [express](agents/backend/express.md) | Node.js + Express 5 | Async error flow, middleware order, Zod validation, Drizzle/Prisma, helmet, structured logs |
+| [fastapi](agents/backend/fastapi.md) | FastAPI + Pydantic v2 | Async SQLAlchemy 2.0, Depends DI, lifespan, OpenAPI-driven, async hygiene |
+| [django](agents/backend/django.md) | Django 5 / DRF / Ninja | Settings split, custom user model, services + selectors, migrations, `manage.py check --deploy` |
+| [nestjs](agents/backend/nestjs.md) | NestJS 10+ / Fastify | Modules + DI, guards/interceptors/pipes/filters, Prisma/TypeORM, BullMQ, microservices |
+| [rest-api](agents/backend/rest-api.md) | Language-agnostic API design | Resources, status codes, RFC 7807 errors, cursor pagination, idempotency keys, ETags, versioning, OpenAPI 3.1 |
+
 ---
 
 ## Agent file format
@@ -161,13 +171,13 @@ agents/
                  iac-security-reviewer, api-security-reviewer, privacy-reviewer
   data/          sql, data-pipelines, ml-workflows
   frontend/      react, vue, svelte, css, accessibility
+  backend/       express, fastapi, django, nestjs, rest-api
 ```
 
 Planned domains:
 
 ```
 agents/
-  backend/       express, fastapi, django, database-design
   devops/        docker, kubernetes, terraform, ci-cd
   mobile/        react-native (swift and kotlin may move here)
 ```
