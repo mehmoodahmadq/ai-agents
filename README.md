@@ -119,6 +119,17 @@ client.messages.create(
 | [nestjs](agents/backend/nestjs.md) | NestJS 10+ / Fastify | Modules + DI, guards/interceptors/pipes/filters, Prisma/TypeORM, BullMQ, microservices |
 | [rest-api](agents/backend/rest-api.md) | Language-agnostic API design | Resources, status codes, RFC 7807 errors, cursor pagination, idempotency keys, ETags, versioning, OpenAPI 3.1 |
 
+### DevOps
+
+| Agent | Focus | Highlights |
+|-------|-------|------------|
+| [docker](agents/devops/docker.md) | OCI image authoring | Multi-stage, BuildKit cache/secret mounts, distroless, non-root, digest pinning, signals, SBOM/cosign |
+| [kubernetes](agents/devops/kubernetes.md) | Production manifests | Deployments/StatefulSets, probes, requests/limits, HPA, PDB, NetworkPolicy, Helm/Kustomize, graceful shutdown |
+| [terraform](agents/devops/terraform.md) | Terraform / OpenTofu 1.6+ | Modules, remote state with locking, provider pinning, `moved`/`removed`/`import`, OIDC CI, drift detection |
+| [github-actions](agents/devops/github-actions.md) | CI/CD on GitHub | Least-privilege `GITHUB_TOKEN`, OIDC cloud auth, SHA-pinned actions, caching, matrix, reusable workflows |
+| [observability](agents/devops/observability.md) | Logs / metrics / traces | OpenTelemetry SDK + Collector, RED/USE, cardinality discipline, SLO burn-rate alerts, tail sampling |
+| [sre](agents/devops/sre.md) | Site reliability practice | SLOs + error budgets, incident roles, blameless postmortems, runbooks, on-call hygiene, progressive delivery |
+
 ---
 
 ## Agent file format
@@ -172,14 +183,16 @@ agents/
   data/          sql, data-pipelines, ml-workflows
   frontend/      react, vue, svelte, css, accessibility
   backend/       express, fastapi, django, nestjs, rest-api
+  devops/        docker, kubernetes, terraform, github-actions, observability, sre
 ```
 
 Planned domains:
 
 ```
 agents/
-  devops/        docker, kubernetes, terraform, ci-cd
   mobile/        react-native (swift and kotlin may move here)
+  testing/       e2e (Playwright), load-testing, mutation-testing
+  databases/     postgres, mongodb, redis, elasticsearch
 ```
 
 Naming: `<stack-or-tool>.md` — lowercase, hyphenated, no version numbers in filenames.
