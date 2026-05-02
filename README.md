@@ -130,6 +130,17 @@ client.messages.create(
 | [observability](agents/devops/observability.md) | Logs / metrics / traces | OpenTelemetry SDK + Collector, RED/USE, cardinality discipline, SLO burn-rate alerts, tail sampling |
 | [sre](agents/devops/sre.md) | Site reliability practice | SLOs + error budgets, incident roles, blameless postmortems, runbooks, on-call hygiene, progressive delivery |
 
+### Testing
+
+| Agent | Focus | Highlights |
+|-------|-------|------------|
+| [unit-testing](agents/testing/unit-testing.md) | Language-agnostic unit testing | AAA, FIRST, fakes vs mocks, behavior-not-implementation, deterministic, mutation-driven coverage |
+| [integration-testing](agents/testing/integration-testing.md) | Real-dependency integration | Testcontainers, ephemeral DBs/queues, migrations, transactional vs TRUNCATE isolation, MSW for HTTP boundaries |
+| [e2e-playwright](agents/testing/e2e-playwright.md) | End-to-end browser flows | Playwright TS, role-based locators, web-first assertions, storage-state auth, traces, sharding |
+| [client-testing](agents/testing/client-testing.md) | Frontend component testing | Vitest/Jest + Testing Library, user-event v14, MSW, role queries, no implementation-detail tests |
+| [load-testing](agents/testing/load-testing.md) | Performance & capacity | k6 / Locust, smoke / load / stress / spike / soak / breakpoint, open-loop arrival rate, SLO-driven thresholds |
+| [mutation-testing](agents/testing/mutation-testing.md) | Real test-quality measurement | Stryker / mutmut / PIT, operators, equivalent mutants, incremental + per-test coverage, ratcheting thresholds |
+
 ---
 
 ## Agent file format
@@ -184,6 +195,8 @@ agents/
   frontend/      react, vue, svelte, css, accessibility
   backend/       express, fastapi, django, nestjs, rest-api
   devops/        docker, kubernetes, terraform, github-actions, observability, sre
+  testing/       unit-testing, integration-testing, e2e-playwright, client-testing,
+                 load-testing, mutation-testing
 ```
 
 Planned domains:
@@ -191,7 +204,6 @@ Planned domains:
 ```
 agents/
   mobile/        react-native (swift and kotlin may move here)
-  testing/       e2e (Playwright), load-testing, mutation-testing
   databases/     postgres, mongodb, redis, elasticsearch
 ```
 
